@@ -6,54 +6,29 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:46 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/05 18:19:57 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/24 22:54:40 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "ft_traceroute.h"
 
-extern volatile sig_atomic_t g_stop;
+extern volatile sig_atomic_t ctrl_c;
 
-uint16_t checksum(void *ptr, int len)
-{
-    uint16_t* data = ptr;
-    uint32_t  sum = 0;
-    for (; len > 1; len -= 2)
-        sum += *data++;
-    if (len == 1)
-        sum += *(uint8_t*)data;
-    sum = (sum >> 16) + (sum & 0xFFFF);
-    sum += (sum >> 16);
-    return ~sum;
-}
-
-static t_packet init_packet(int i) {
-    
-    t_packet packet;
-    
-    memset(&packet, 0, sizeof(packet));
-    packet.type = ICMP_ECHO;
-    packet.code = 0;
-    packet.id = ntohs(getpid() & 0xFFFF); // Making sure it fits in 16-bits range
-    packet.seq = i;
-    packet.checksum = checksum(&packet, sizeof(packet));
-    return packet;
-}
-
-static char *get_ip(struct addrinfo *resolved, int sock) {
+static char *get_ip_dest(t_tracert *t, struct addrinfo *resolved) {
     
     static char         ip_addr[INET_ADDRSTRLEN];
     struct sockaddr_in  *tmp = (struct sockaddr_in *)resolved->ai_addr;
     
     if (inet_ntop(AF_INET, &tmp->sin_addr, ip_addr, sizeof(ip_addr)) == NULL) {
-        close(sock);
+        close(t->sock_udp);
+        close(t->sock_icmp);
         freeaddrinfo(resolved);
         oops_crash(E_BAD_DEST, NULL);
     }   
     return ip_addr;
 }
 
-static struct addrinfo *resolve_addr(char *dest, int sock) {
+static struct addrinfo *resolve_dest(t_tracert *t, char *dest) {
     
     struct addrinfo hints;
     struct addrinfo *resolved;
@@ -64,45 +39,48 @@ static struct addrinfo *resolve_addr(char *dest, int sock) {
     hints.ai_protocol = IPPROTO_ICMP;
 
     if (getaddrinfo(dest, NULL, &hints, &resolved) != 0) {
-        close(sock);
-        oops_crash(E_BAD_DEST, NULL);
+        close(t->sock_udp);
+        close(t->sock_icmp);
+        oops_crash(E_BAD_DEST, dest);
     }
     return resolved;
 }
 
-static int init_socket(t_parser *args) {
+static void init_sockets(int *sock_udp, int *sock_icmp) {
     
-    int sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
-    
-    if (sockfd < 0)
-        oops_crash(E_SOCK_ERROR, NULL);
-    if (setsockopt(sockfd, IPPROTO_IP, IP_TTL, &args->ttl, sizeof(args->ttl)) < 0) {
-        close(sockfd);
-        oops_crash(E_SETSOCKOPT_ERROR, NULL);
+    *sock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+    *sock_icmp = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+
+    if (*sock_udp < 0)
+        oops_crash(E_SOCKET, NULL);
+    if (*sock_icmp < 0) {
+        close(*sock_udp);
+        oops_crash(E_SOCKET, NULL);
     }
-    return sockfd;
 }
 
-void start_traceroute(t_parser *args, t_traceroute *tracert) {
+void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Preparing socket and dest address
-    traceroute->sockfd = init_socket(args);
-    traceroute->resolved = resolve_addr(args->dest, traceroute->sockfd);
-    traceroute->ip_dest = get_ip(traceroute->resolved, traceroute->sockfd);
-    print_start_infos(args, tracert);
+    init_sockets(&t->sock_udp, &t->sock_icmp);
+    t->resolved = resolve_dest(t, args->dest);
+    t->ip_dest = get_ip_dest(t, t->resolved);
     
     // Main loop
-    for (int i = 0; i != args->packet_count; i++) {
-        traceroute->packet = init_packet(i);
-        if (play_tracert_pong(args, tracert) == -1)
-            traceroute->packets_lost++;
-        else
-            traceroute->packets_sent++;
-        sleep(args->interval);
-        if (g_stop == 1)
+    fprintf(stdout, "traceroute to %s (%s), %d hops max, %d byte packets\n", args->dest, t->ip_dest, args->max_hop, PACKET_SIZE);
+    for (int ttl = args->first_hop; ttl != args->max_hop; ttl++) {
+        fprintf(stdout, "%2d  ", ttl);
+        if (setsockopt(t->sock_udp, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
+            fprintf(stderr, E_SETSOCKOPT);
+            break;
+        }
+        int ret = probing(args, t);
+        if (ret < 0 || ret == END_OF_PROBING)
+            break;
+        if (ctrl_c == 1)
             break;
     }
-    print_end_infos(tracert, args->dest);
-    freeaddrinfo(traceroute->resolved);
-    close(traceroute->sockfd);
+    freeaddrinfo(t->resolved);
+    close(t->sock_udp);
+    close(t->sock_icmp);
 }

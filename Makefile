@@ -6,7 +6,7 @@
 #    By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 12:38:45 by lrandria          #+#    #+#              #
-#    Updated: 2025/05/05 13:40:21 by lrandria         ###   ########.fr        #
+#    Updated: 2025/05/24 19:08:55 by lrandria         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -15,7 +15,7 @@ NAME =	ft_traceroute
 SRCS =	0_main.c \
 		1_parser.c \
 		2_init_start.c \
-		3_tracert_pong.c \
+		3_probing.c \
 		4_print.c \
 
 INC =	ft_traceroute.h \
