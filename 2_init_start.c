@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:46 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 13:09:15 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 20:14:49 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,6 +46,16 @@ static struct addrinfo *resolve_dest(t_tracert *t, char *dest) {
     return resolved;
 }
 
+// static void init_src_port(int *sock_udp) {
+
+//     struct sockaddr_in src_addr = {0};
+//     src_addr.sin_family = AF_INET;
+//     src_addr.sin_addr.s_addr = INADDR_ANY;
+//     src_addr.sin_port = htons((getpid() & 0xFFFF) | (1 << 15));
+    
+//     bind(*sock_udp, (struct sockaddr *)&src_addr, sizeof(src_addr));
+// }
+
 static void init_sockets(int *sock_udp, int *sock_icmp) {
     
     *sock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -63,14 +73,15 @@ void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Preparing socket and dest address
     init_sockets(&t->sock_udp, &t->sock_icmp);
+    //init_src_port(&t->sock_udp);
     t->resolved = resolve_dest(t, args->dest);
-    t->ip_dest = get_ip_dest(t, t->resolved);
-    
+    t->ip_dest = get_ip_dest(t, t->resolved);\
+
     // Main loop
     fprintf(stdout, "traceroute to %s (%s), %d hops max, %d byte packets\n", args->dest, t->ip_dest, args->max_hop, PACKET_SIZE);
-    for (int ttl = args->first_hop; ttl < args->max_hop + 1; ttl++) { // +1 to print last hop
-        fprintf(stdout, "%2d  ", ttl);
-        if (setsockopt(t->sock_udp, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
+    for (; args->first_hop < args->max_hop + 1; args->first_hop++) { // +1 to print last hop
+        fprintf(stdout, "%2d  ", args->first_hop);
+        if (setsockopt(t->sock_udp, IPPROTO_IP, IP_TTL, &args->first_hop, sizeof(args->first_hop)) < 0) {
             fprintf(stderr, E_SETSOCKOPT);
             break;
         }

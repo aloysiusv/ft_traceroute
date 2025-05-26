@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/14 16:40:23 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 13:28:11 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 19:03:59 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -47,6 +47,7 @@
 # define E_BAD_FIRSTHOP      "ft_traceroute: first hop out of range"
 # define E_BAD_MAXHOP        "ft_traceroute: max hops cannot be more than 255"
 # define E_BAD_PROB          "ft_traceroute: no more than 10 probes per hop"
+# define E_BAD_PORT          "ft_traceroute: invalid port number"
 # define E_BAD_SENDWAIT      "ft_traceroute: bad sendtime specified: "
 # define E_WTF_OPT           "ft_traceroute: bad option: "
 # define E_SOCKET            "ft_traceroute: 'socket()' error"
@@ -67,7 +68,6 @@
 # define PAYLOAD_SIZE       56
 # define PACKET_SIZE        60 // Default for IPV4
 # define RESPONSE_SIZE      PACKET_SIZE + IP_HDR_SIZE
-
 
 // UTILS
 # define MAX_PROBES         10

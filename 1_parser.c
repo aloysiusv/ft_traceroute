@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:39 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 13:27:55 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 19:02:56 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -30,6 +30,8 @@ static int check_value(const char *str, int flag) {
     }
     else if (flag == OPT_NB_PROBES && (val <= 0 || val > MAX_PROBES))
         oops_crash(E_BAD_PROB, NULL);
+    else if (flag == OPT_PORT && (val <= 0 || val > 65536))
+        oops_crash(E_BAD_PORT, NULL);
     else if (flag == OPT_SENDWAIT && val <= 0)
         oops_crash(E_BAD_SENDWAIT, str);
     return (uint16_t)val;
@@ -83,7 +85,7 @@ void parse_args(int argc, char *argv[], t_parser *args) {
             else if (strcmp(argv[i], "-q") == 0)  {
                 if (argv[i + 1] == NULL)
                     oops_crash(E_MISSING_ARG, E_TRY_HELP);
-                set_option(args, OPT_NB_PROBES, NULL); 
+                set_option(args, OPT_NB_PROBES, argv[++i]); 
             }
             else if (strcmp(argv[i], "-z") == 0) {
                 if (argv[i + 1] == NULL)
