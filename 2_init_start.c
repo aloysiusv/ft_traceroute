@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:46 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/24 22:54:40 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 13:09:15 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -68,7 +68,7 @@ void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Main loop
     fprintf(stdout, "traceroute to %s (%s), %d hops max, %d byte packets\n", args->dest, t->ip_dest, args->max_hop, PACKET_SIZE);
-    for (int ttl = args->first_hop; ttl != args->max_hop; ttl++) {
+    for (int ttl = args->first_hop; ttl < args->max_hop + 1; ttl++) { // +1 to print last hop
         fprintf(stdout, "%2d  ", ttl);
         if (setsockopt(t->sock_udp, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)) < 0) {
             fprintf(stderr, E_SETSOCKOPT);

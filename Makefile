@@ -6,7 +6,7 @@
 #    By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/05/05 12:38:45 by lrandria          #+#    #+#              #
-#    Updated: 2025/05/24 19:08:55 by lrandria         ###   ########.fr        #
+#    Updated: 2025/05/26 13:05:25 by lrandria         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -21,7 +21,7 @@ SRCS =	0_main.c \
 INC =	ft_traceroute.h \
 
 CC = gcc
-FLAGS = -Wall -Wextra -Werror
+FLAGS = -Wall -Wextra -Werror -g -fsanitize=address
 LINKER_FLAGS = -lm # For libm, the math library
 
 OBJ = $(addprefix $(OBJ_DIR), $(SRCS:.$(SRCS_EXT)=.o))

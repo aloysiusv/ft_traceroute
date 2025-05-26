@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:39 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/24 22:55:05 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 13:27:55 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -28,7 +28,7 @@ static int check_value(const char *str, int flag) {
         else if (val > 255)
             oops_crash(E_BAD_MAXHOP, NULL);
     }
-    else if (flag == OPT_NB_PROBES && (val <= 0 || val > 10))
+    else if (flag == OPT_NB_PROBES && (val <= 0 || val > MAX_PROBES))
         oops_crash(E_BAD_PROB, NULL);
     else if (flag == OPT_SENDWAIT && val <= 0)
         oops_crash(E_BAD_SENDWAIT, str);

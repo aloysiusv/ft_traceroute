@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/14 16:40:23 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/24 23:58:42 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/26 13:28:11 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,6 +70,7 @@
 
 
 // UTILS
+# define MAX_PROBES         10
 # define END_OF_PROBING     -2
 # define TIMEOUT_SEC        1
 # define TIMEOUT_USEC       0
@@ -99,8 +100,8 @@ typedef struct {
 
     char                    packet_udp[PACKET_SIZE];
     
-    int                     sock_udp; // For sending
-    int                     sock_icmp; // For receiving
+    int                     sock_udp; // Sending
+    int                     sock_icmp; // Receiving
     char                    *ip_dest;
     struct addrinfo		    *resolved;
 
