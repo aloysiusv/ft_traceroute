@@ -25,7 +25,7 @@ static int check_value(const char *str, int flag) {
     else if (flag == OPT_MAX_HOP) {
         if (val == 0)
             oops_crash(E_BAD_FIRSTHOP, NULL);
-        else if (val > 255)
+        else if (val < 0 || val > 255)
             oops_crash(E_BAD_MAXHOP, NULL);
     }
     else if (flag == OPT_NB_PROBES && (val <= 0 || val > MAX_PROBES))
