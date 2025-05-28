@@ -94,7 +94,7 @@ typedef struct {
     socklen_t               addr_len;
 
     struct icmphdr 		    *icmp_hdr; // To parse ICMP error type
-    struct udphdr 		    *udp_hdr; // To parse source port
+    struct udphdr 		    *udp_hdr; // To parse sport and dport
 } t_response;
 
 typedef struct {
@@ -102,8 +102,9 @@ typedef struct {
 
     char                    packet_udp[PACKET_SIZE];
 
-    int                     sock_udp; // Sending
-    int                     sock_icmp; // Receiving
+    int                     pid; // To filter our probes
+    int                     sock_udp; // Send
+    int                     sock_icmp; // Recv
     char                    *ip_dest;
     struct addrinfo		    *resolved;
 

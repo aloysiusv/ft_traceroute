@@ -46,8 +46,9 @@ static struct addrinfo *resolve_dest(t_tracert *t, char *dest) {
     return resolved;
 }
 
-static void init_sockets(int *sock_udp, int *sock_icmp) {
+static void init_sockets(int *sock_udp, int *sock_icmp, int *pid) {
     
+    // Init send and recv sockets
     *sock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     *sock_icmp = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
 
@@ -58,10 +59,12 @@ static void init_sockets(int *sock_udp, int *sock_icmp) {
         oops_crash(E_SOCKET, NULL);
     }
     
+    // Init source port with PID --useful for filtering our responses
+    *pid = (getpid() & 0xFFFF) | (1 << 15);
     struct sockaddr_in src_addr = {0};
     src_addr.sin_family = AF_INET;
     src_addr.sin_addr.s_addr = INADDR_ANY;
-    src_addr.sin_port = htons((getpid() & 0xFFFF) | (1 << 15));
+    src_addr.sin_port = htons(*pid);
 
     if (bind(*sock_udp, (struct sockaddr *)&src_addr, sizeof(src_addr)) < 0) {
         close(*sock_udp);
@@ -73,7 +76,7 @@ static void init_sockets(int *sock_udp, int *sock_icmp) {
 void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Preparing socket and dest address
-    init_sockets(&t->sock_udp, &t->sock_icmp);
+    init_sockets(&t->sock_udp, &t->sock_icmp, &t->pid);
     t->resolved = resolve_dest(t, args->dest);
     t->ip_dest = get_ip_dest(t, t->resolved);\
 

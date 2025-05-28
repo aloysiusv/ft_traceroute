@@ -13,16 +13,13 @@
 #include "ft_traceroute.h"
 
 static bool is_valid_response(t_response *rsp, uint16_t expected_sport, uint16_t expected_dport) {
+    
     if (!rsp->icmp_hdr || !rsp->udp_hdr)
         return false;
-
-    if (rsp->icmp_hdr->type != ICMP_TIME_EXCEEDED &&
-        rsp->icmp_hdr->type != ICMP_DEST_UNREACH)
+    if (rsp->icmp_hdr->type != ICMP_TIME_EXCEEDED && rsp->icmp_hdr->type != ICMP_DEST_UNREACH)
         return false;
-
     if (ntohs(rsp->udp_hdr->uh_sport) != expected_sport)
         return false;
-
     if (ntohs(rsp->udp_hdr->uh_dport) != expected_dport)
         return false;
 
@@ -43,22 +40,19 @@ static void parse_headers(t_response *rsp, char *buffer) {
 }
 
 static int receive_probe(t_response *rsp, int *sock_icmp, uint16_t expected_sport, uint16_t expected_dport) {
-    struct timeval timeout = {.tv_sec = TIMEOUT_SEC, .tv_usec = TIMEOUT_USEC};
-
-    while (1) {
-        fd_set readfds;
+   
+    fd_set          readfds;
+    struct timeval  timeout = {.tv_sec = TIMEOUT_SEC, .tv_usec = TIMEOUT_USEC};
+    
+    while (1) { // Ugly, I know :'(
         FD_ZERO(&readfds);
         FD_SET(*sock_icmp, &readfds);
-
         int ret = select(*sock_icmp + 1, &readfds, NULL, NULL, &timeout);
-        if (ret < 0)
-            return -1;
-        else if (ret == 0)
-            return 0;
+        if (ret <= 0)
+            return ret; // Error or timeout
 
         rsp->addr_len = sizeof(rsp->addr);
-        ssize_t bytes = recvfrom(*sock_icmp, rsp->buffer, RESPONSE_SIZE, 0,
-                                 (struct sockaddr *)&rsp->addr, &rsp->addr_len);
+        ssize_t bytes = recvfrom(*sock_icmp, rsp->buffer, RESPONSE_SIZE, 0, (struct sockaddr *)&rsp->addr, &rsp->addr_len);
         if (bytes < 0)
             continue;
 
@@ -66,28 +60,26 @@ static int receive_probe(t_response *rsp, int *sock_icmp, uint16_t expected_spor
         if (is_valid_response(rsp, expected_sport, expected_dport))
             return 1;
     }
-    return 0;  // No matching packet found within MAX_ICMP_LOOPS
+    return 0;
 }
 
 int probing(t_parser *args, t_tracert *t) {
 
-    t_response rsp = t->response;
-    int finished = 0;
-    struct timeval start, end;
-
-    uint16_t sport = (getpid() & 0xFFFF) | (1 << 15);
+    t_response          rsp = t->response;
+    int                 finished = 0;
+    struct timeval      start, end;
 
     for (int probe = 0; probe < args->nb_probes; probe++) {
-        uint16_t dport = args->port + probe;
+        uint16_t current_port = args->port + probe;
 
-        ((struct sockaddr_in *)t->resolved->ai_addr)->sin_port = htons(dport);
+        ((struct sockaddr_in *)t->resolved->ai_addr)->sin_port = htons(current_port);
         memset(t->packet_udp, 0, sizeof(t->packet_udp));
 
         gettimeofday(&start, NULL);
         if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0,
                    t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
             return -1;
-        int ret_rcv = receive_probe(&rsp, &t->sock_icmp, sport, dport);
+        int ret_rcv = receive_probe(&rsp, &t->sock_icmp, t->pid, current_port);
         if (ret_rcv < 0)
             return -1;
         else if (ret_rcv == 0) {
