@@ -76,19 +76,20 @@ int probing(t_parser *args, t_tracert *t) {
         memset(t->packet_udp, 0, sizeof(t->packet_udp));
 
         gettimeofday(&start, NULL);
-        if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0,
-                   t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
+        if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0, t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
             return -1;
         int ret_rcv = receive_probe(&rsp, &t->sock_icmp, t->pid, current_port);
         if (ret_rcv < 0)
             return -1;
         else if (ret_rcv == 0) {
             fprintf(stdout, "*  ");
+            fflush(stdout);
             continue;
         }
         gettimeofday(&end, NULL);
         
         print_probe_result(&start, &end, &rsp.addr, rsp.prev_ip);
+        fflush(stdout);
         if (rsp.icmp_hdr->type == ICMP_DEST_UNREACH)
             finished = 1;
 
