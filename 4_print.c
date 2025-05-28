@@ -47,6 +47,5 @@ void print_probe_result(struct timeval *start, struct timeval *end, struct socka
     double  rtt;
     rtt = (end->tv_sec - start->tv_sec) * 1000.0;
     rtt += (end->tv_usec - start->tv_usec) / 1000.0;
-    
     fprintf(stdout, "%.3f ms  ",rtt);
 }

@@ -46,16 +46,6 @@ static struct addrinfo *resolve_dest(t_tracert *t, char *dest) {
     return resolved;
 }
 
-// static void init_src_port(int *sock_udp) {
-
-//     struct sockaddr_in src_addr = {0};
-//     src_addr.sin_family = AF_INET;
-//     src_addr.sin_addr.s_addr = INADDR_ANY;
-//     src_addr.sin_port = htons((getpid() & 0xFFFF) | (1 << 15));
-    
-//     bind(*sock_udp, (struct sockaddr *)&src_addr, sizeof(src_addr));
-// }
-
 static void init_sockets(int *sock_udp, int *sock_icmp) {
     
     *sock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -67,13 +57,23 @@ static void init_sockets(int *sock_udp, int *sock_icmp) {
         close(*sock_udp);
         oops_crash(E_SOCKET, NULL);
     }
+    
+    struct sockaddr_in src_addr = {0};
+    src_addr.sin_family = AF_INET;
+    src_addr.sin_addr.s_addr = INADDR_ANY;
+    src_addr.sin_port = htons((getpid() & 0xFFFF) | (1 << 15));
+
+    if (bind(*sock_udp, (struct sockaddr *)&src_addr, sizeof(src_addr)) < 0) {
+        close(*sock_udp);
+        close(*sock_icmp);
+        oops_crash(E_BIND, NULL);
+    };
 }
 
 void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Preparing socket and dest address
     init_sockets(&t->sock_udp, &t->sock_icmp);
-    //init_src_port(&t->sock_udp);
     t->resolved = resolve_dest(t, args->dest);
     t->ip_dest = get_ip_dest(t, t->resolved);\
 

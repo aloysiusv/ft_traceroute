@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <limits.h>
+#include <stdbool.h>
 
 // LIBS FOR SOCKETS AND NETWORK
 #include <sys/socket.h>
@@ -52,6 +53,7 @@
 # define E_WTF_OPT           "ft_traceroute: bad option: "
 # define E_SOCKET            "ft_traceroute: 'socket()' error"
 # define E_SETSOCKOPT        "ft_traceroute: 'setsockopt()' error"
+# define E_BIND              "ft_traceroute: 'bind()' error"
 # define E_INTERNAL          "ft_traceroute: internal error"
 # define E_TRY_HELP          "\nTry 'ft_traceroute --help' for more information"
 
@@ -65,7 +67,6 @@
 // FIXED SIZE
 # define ICMP_HDR_SIZE      8
 # define IP_HDR_SIZE        20
-# define PAYLOAD_SIZE       56
 # define PACKET_SIZE        60 // Default for IPV4
 # define RESPONSE_SIZE      PACKET_SIZE + IP_HDR_SIZE
 
@@ -79,7 +80,7 @@ typedef struct {
     int                     flags; // For all options
     int                     first_hop; // Set the starting hop of your choice
     int                     max_hop;
-    int                     port;
+    int                     port; // Set dest port (will be incr by 1 for each probe)
     int                     nb_probes;
     int                     send_wait; // Minimal time interval between probes
     char                    *dest;
@@ -92,14 +93,15 @@ typedef struct {
     struct sockaddr_in      addr;
     socklen_t               addr_len;
 
-    struct icmphdr 		    *icmp_hdr;
+    struct icmphdr 		    *icmp_hdr; // To parse ICMP error type
+    struct udphdr 		    *udp_hdr; // To parse source port
 } t_response;
 
 typedef struct {
     t_response			    response;
 
     char                    packet_udp[PACKET_SIZE];
-    
+
     int                     sock_udp; // Sending
     int                     sock_icmp; // Receiving
     char                    *ip_dest;

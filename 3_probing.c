@@ -12,76 +12,95 @@
 
 #include "ft_traceroute.h"
 
-static int parse_headers(t_tracert *t, uint16_t base_port, int ttl) {
+static bool is_valid_response(t_response *rsp, uint16_t expected_sport, uint16_t expected_dport) {
+    if (!rsp->icmp_hdr || !rsp->udp_hdr)
+        return false;
 
-    struct ip *ip_hdr = (struct ip *)t->response.buffer;
+    if (rsp->icmp_hdr->type != ICMP_TIME_EXCEEDED &&
+        rsp->icmp_hdr->type != ICMP_DEST_UNREACH)
+        return false;
+
+    if (ntohs(rsp->udp_hdr->uh_sport) != expected_sport)
+        return false;
+
+    if (ntohs(rsp->udp_hdr->uh_dport) != expected_dport)
+        return false;
+
+    return true;
+}
+
+static void parse_headers(t_response *rsp, char *buffer) {
+
+    // Get ICMP header
+    struct ip *ip_hdr = (struct ip *)buffer;
     int ip_header_len = ip_hdr->ip_hl * 4;
-    struct icmphdr *icmp_hdr = (struct icmphdr *)(t->response.buffer + ip_header_len);
-
-    if (icmp_hdr->type != ICMP_TIME_EXCEEDED && icmp_hdr->type != ICMP_DEST_UNREACH)
-        return -1;
+    rsp->icmp_hdr = (struct icmphdr *)(rsp->buffer + ip_header_len);
 
     // Get UDP header
-    struct ip *inner_ip = (struct ip *)(t->response.buffer + ip_header_len + sizeof(struct icmphdr));
+    struct ip *inner_ip = (struct ip *)(rsp->buffer + ip_header_len + sizeof(struct icmphdr));
     int inner_ip_len = inner_ip->ip_hl * 4;
-    struct udphdr *udp_hdr = (struct udphdr *)((uint8_t *)inner_ip + inner_ip_len);
+    rsp->udp_hdr = (struct udphdr *)((uint8_t *)inner_ip + inner_ip_len);
+}
 
-    // Check PID
-    char *orig_payload = (char *)(udp_hdr + 1);
-    pid_t response_pid;
-    memcpy(&response_pid, orig_payload, sizeof(pid_t));
-    if (response_pid != getpid() && ttl > 1) // Ugly hack ;( to print first ttl anyway
-        return -1; // Not our probe, ignore
+static int receive_probe(t_response *rsp, int *sock_icmp, uint16_t expected_sport, uint16_t expected_dport) {
+    struct timeval timeout = {.tv_sec = TIMEOUT_SEC, .tv_usec = TIMEOUT_USEC};
 
-    // Check port range
-    uint16_t dport = ntohs(udp_hdr->dest);
-    if (dport < base_port || dport >= base_port + MAX_PROBES)
-        return -1;
+    while (1) {
+        fd_set readfds;
+        FD_ZERO(&readfds);
+        FD_SET(*sock_icmp, &readfds);
 
-    return icmp_hdr->type;
+        int ret = select(*sock_icmp + 1, &readfds, NULL, NULL, &timeout);
+        if (ret < 0)
+            return -1;
+        else if (ret == 0)
+            return 0;
+
+        rsp->addr_len = sizeof(rsp->addr);
+        ssize_t bytes = recvfrom(*sock_icmp, rsp->buffer, RESPONSE_SIZE, 0,
+                                 (struct sockaddr *)&rsp->addr, &rsp->addr_len);
+        if (bytes < 0)
+            continue;
+
+        parse_headers(rsp, rsp->buffer);
+        if (is_valid_response(rsp, expected_sport, expected_dport))
+            return 1;
+    }
+    return 0;  // No matching packet found within MAX_ICMP_LOOPS
 }
 
 int probing(t_parser *args, t_tracert *t) {
 
-    int                    finished = 0;
-    struct timeval         start, end, timeout;
-    struct sockaddr_in     *target = (struct sockaddr_in *)t->resolved->ai_addr;
-    fd_set                 readfds;
-    pid_t                  pid = getpid();
+    t_response rsp = t->response;
+    int finished = 0;
+    struct timeval start, end;
+
+    uint16_t sport = (getpid() & 0xFFFF) | (1 << 15);
 
     for (int probe = 0; probe < args->nb_probes; probe++) {
-        
-        target->sin_port = htons(args->port + probe);
-        
+        uint16_t dport = args->port + probe;
+
+        ((struct sockaddr_in *)t->resolved->ai_addr)->sin_port = htons(dport);
+        memset(t->packet_udp, 0, sizeof(t->packet_udp));
+
         gettimeofday(&start, NULL);
-        memcpy(t->packet_udp, &pid, sizeof(pid));
-        if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0, t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
+        if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0,
+                   t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
             return -1;
-        FD_ZERO(&readfds);
-        FD_SET(t->sock_icmp, &readfds);
-        timeout.tv_sec = TIMEOUT_SEC;
-        timeout.tv_usec = TIMEOUT_USEC;
-        int sel = select(t->sock_icmp + 1, &readfds, NULL, NULL, &timeout);
-        if (sel < 0)
+        int ret_rcv = receive_probe(&rsp, &t->sock_icmp, sport, dport);
+        if (ret_rcv < 0)
             return -1;
-        else if (sel == 0) {
-            fprintf(stdout, "* ");
+        else if (ret_rcv == 0) {
+            fprintf(stdout, "*  ");
             continue;
         }
-        t_response rsp = t->response;
-        memset(&rsp, 0, sizeof(t_response));
-        rsp.addr_len = sizeof(rsp.addr);
-        if (recvfrom(t->sock_icmp, t->response.buffer, RESPONSE_SIZE, 0, (struct sockaddr *)&rsp.addr, &rsp.addr_len) <= 0)
-           fprintf(stdout, "* ");
         gettimeofday(&end, NULL);
-
-        int type = parse_headers(t, args->port, args->first_hop);
-        if (type == -1)
-            args->first_hop--;
-        else if (type == ICMP_DEST_UNREACH)
+        
+        print_probe_result(&start, &end, &rsp.addr, rsp.prev_ip);
+        if (rsp.icmp_hdr->type == ICMP_DEST_UNREACH)
             finished = 1;
-        else
-            print_probe_result(&start, &end, &rsp.addr, t->response.prev_ip);
+
+        // Optional interval between probes
         if (args->send_wait > 10)
             usleep(args->send_wait);
         else
