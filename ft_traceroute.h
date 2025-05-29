@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/04/14 16:40:23 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 19:03:59 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/29 11:56:54 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,7 +102,7 @@ typedef struct {
 
     char                    packet_udp[PACKET_SIZE];
 
-    int                     pid; // To filter our probes
+    int                     sport; // To filter our probes
     int                     sock_udp; // Send
     int                     sock_icmp; // Recv
     char                    *ip_dest;

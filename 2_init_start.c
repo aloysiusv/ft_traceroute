@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:46 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 20:14:49 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/29 11:56:54 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -46,7 +46,7 @@ static struct addrinfo *resolve_dest(t_tracert *t, char *dest) {
     return resolved;
 }
 
-static void init_sockets(int *sock_udp, int *sock_icmp, int *pid) {
+static void init_sockets(int *sock_udp, int *sock_icmp, int *sport) {
     
     // Init send and recv sockets
     *sock_udp = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -59,12 +59,12 @@ static void init_sockets(int *sock_udp, int *sock_icmp, int *pid) {
         oops_crash(E_SOCKET, NULL);
     }
     
-    // Init source port with PID --useful for filtering our responses
-    *pid = (getpid() & 0xFFFF) | (1 << 15);
+    // Init source port with sport --useful for filtering our responses
+    *sport = (getpid() & 0xFFFF) | (1 << 15);
     struct sockaddr_in src_addr = {0};
     src_addr.sin_family = AF_INET;
     src_addr.sin_addr.s_addr = INADDR_ANY;
-    src_addr.sin_port = htons(*pid);
+    src_addr.sin_port = htons(*sport);
 
     if (bind(*sock_udp, (struct sockaddr *)&src_addr, sizeof(src_addr)) < 0) {
         close(*sock_udp);
@@ -76,7 +76,7 @@ static void init_sockets(int *sock_udp, int *sock_icmp, int *pid) {
 void start_traceroute(t_parser *args, t_tracert *t) {
     
     // Preparing socket and dest address
-    init_sockets(&t->sock_udp, &t->sock_icmp, &t->pid);
+    init_sockets(&t->sock_udp, &t->sock_icmp, &t->sport);
     t->resolved = resolve_dest(t, args->dest);
     t->ip_dest = get_ip_dest(t, t->resolved);\
 

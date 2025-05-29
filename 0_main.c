@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/05 13:40:31 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/24 22:54:27 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/29 11:36:49 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -36,8 +36,10 @@ int main(int ac, char *av[]) {
     
     if (geteuid() != 0)
         oops_crash(E_NOT_SUDO, NULL);
-    if (ac < 2)
-        oops_crash(E_MISSING_DEST, E_TRY_HELP);
+    if (ac < 2) {
+        print_help();
+        exit(EXIT_SUCCESS);
+    }
     memset(&args, 0, sizeof(t_parser));
     memset(&t, 0, sizeof(t_tracert));
     init_default(&args);

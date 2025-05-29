@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/03 10:50:43 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 15:13:39 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/29 12:13:01 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,10 +40,10 @@ void print_probe_result(struct timeval *start, struct timeval *end, struct socka
     inet_ntop(AF_INET, &(from->sin_addr), current_ip, sizeof(current_ip));
 
     if (strcmp(prev_ip, current_ip) != 0) {
-        printf("%s  ", current_ip);
+        fprintf(stdout, "%s  ", current_ip);
         strcpy(prev_ip, current_ip); // Avoid printing the same IP
     }
-    
+
     double  rtt;
     rtt = (end->tv_sec - start->tv_sec) * 1000.0;
     rtt += (end->tv_usec - start->tv_usec) / 1000.0;

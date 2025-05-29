@@ -6,7 +6,7 @@
 /*   By: lrandria <lrandria@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/05/07 13:36:18 by lrandria          #+#    #+#             */
-/*   Updated: 2025/05/26 20:14:38 by lrandria         ###   ########.fr       */
+/*   Updated: 2025/05/29 11:56:30 by lrandria         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -40,7 +40,7 @@ static void parse_headers(t_response *rsp, char *buffer) {
 }
 
 static int receive_probe(t_response *rsp, int *sock_icmp, uint16_t expected_sport, uint16_t expected_dport) {
-   
+
     fd_set          readfds;
     struct timeval  timeout = {.tv_sec = TIMEOUT_SEC, .tv_usec = TIMEOUT_USEC};
     
@@ -75,21 +75,22 @@ int probing(t_parser *args, t_tracert *t) {
         ((struct sockaddr_in *)t->resolved->ai_addr)->sin_port = htons(current_port);
         memset(t->packet_udp, 0, sizeof(t->packet_udp));
 
+        // Start chrono
         gettimeofday(&start, NULL);
         if (sendto(t->sock_udp, t->packet_udp, sizeof(t->packet_udp), 0, t->resolved->ai_addr, t->resolved->ai_addrlen) < 0)
             return -1;
-        int ret_rcv = receive_probe(&rsp, &t->sock_icmp, t->pid, current_port);
+        int ret_rcv = receive_probe(&rsp, &t->sock_icmp, t->sport, current_port);
         if (ret_rcv < 0)
             return -1;
         else if (ret_rcv == 0) {
-            fprintf(stdout, "*  ");
-            fflush(stdout);
+            fprintf(stdout, "* ");
             continue;
         }
         gettimeofday(&end, NULL);
         
         print_probe_result(&start, &end, &rsp.addr, rsp.prev_ip);
-        fflush(stdout);
+        fflush(stdout); // Display sequentially
+        
         if (rsp.icmp_hdr->type == ICMP_DEST_UNREACH)
             finished = 1;
 
